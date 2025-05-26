@@ -1,0 +1,148 @@
+19748-src.FleetSimulationBase-INFO-Initialization of network and routing engine...
+19748-src.routing.NetworkBasic-INFO-... no network dynamics file given -> read folder structure
+19748-src.routing.NetworkBasic-INFO-Loading nodes from d:\projects\fleetpy\github\ptbroker\data\networks\example_network\base\nodes.csv ...
+19748-src.routing.NetworkBasic-INFO-Loading edges from d:\projects\fleetpy\github\ptbroker\data\networks\example_network\base\edges.csv ...
+19748-src.routing.NetworkBasic-INFO-... 7617 nodes loaded!
+19748-src.FleetSimulationBase-INFO-Initialization of line-based public transportation...
+19748-src.FleetSimulationBase-INFO-Public transport router type specified: PTControlBasicCpp
+19748-src.pt.PTControlBasicCpp-INFO-PT operator initialized successfully.
+19748-src.FleetSimulationBase-INFO-Initialization of travelers...
+19748-src.demand.demand-INFO-init(): 0/100 requests removed (rq_time not in simulation time)
+19748-src.demand.demand-INFO-init(): 0/100 requests removed (start == end)
+19748-src.FleetSimulationBase-INFO-Initialization of MoD fleets...
+19748-src.fleetctrl.FleetControlBase-INFO-Scenario example_ptbroker
+Operator 0 control strategy: PoolingInsertionHeuristicOnly
+	 control function: {'func_key': 'distance_and_user_times_with_walk', 'vot': 0.45}
+Operator 0 additional strategies:
+	 RV Heuristics: {'op_rh_reservation_max_routes': 5}
+	 Stop-Insert Heuristics: {}
+	 Charging: None
+	 On-Street Parking: True
+	 Repositioning: None
+	 Dynamic Pricing: None
+	 Dynamic Fleet Sizing: None
+19748-src.fleetctrl.pooling.objectives-INFO- -> assignment_reward_per_rq for objective function: 100000.0
+19748-src.FleetSimulationBase-INFO-Simulation environment specific initializations...
+19748-src.FleetSimulationBase-INFO-Creating or loading initial vehicle states...
+19748-src.FleetSimulationBase-INFO-Initialization of scenario example_ptbroker successful.
+19748-src.FleetSimulationBase-INFO-PTBroker specified
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 2_1 -> vid 4 at 368.4511209628069
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 4_5 -> vid 1 at 492.5866496081764
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 0_4 -> vid 1 at 794.1305401184879
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 8_5 -> vid 1 at 1117.7394861796051
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 10_1 -> vid 1 at 1117.7394861796051
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 5_4 -> vid 4 at 1108
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 7_4 -> vid 4 at 1108
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 11_4 -> vid 1 at 1419.2833766899162
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 15_1 -> vid 3 at 1417.7079100227834
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 16_5 -> vid 0 at 1483.525768574321
+19748-src.broker.PTBroker-INFO-AMoD offer is not available for sub_request 18_5
+19748-src.broker.PTBroker-INFO-AMoD offer is not available for sub_request 19_5
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 4_7 -> vid 3 at 1585.2420891428555
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 17_1 -> vid 4 at 1621.507200347516
+19748-src.broker.PTBroker-INFO-AMoD offer is not available for sub_request 25_5
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 14_4 -> vid 2 at 1708.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 21_1 -> vid 4 at 1743.4399843299213
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 23_1 -> vid 3 at 1850.4191767127659
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 8_7 -> vid 3 at 2040.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 22_4 -> vid 4 at 2008.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 24_4 -> vid 4 at 2008.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 28_1 -> vid 2 at 2300.7613275434824
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 30_1 -> vid 3 at 2338.4316773870823
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 32_5 -> vid 3 at 2508.52541115054
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 26_4 -> vid 0 at 2536.6545173024033
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 31_5 -> vid 4 at 2555.8006481273987
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 16_7 -> vid 1 at 2640.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 29_4 -> vid 2 at 2608.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 33_1 -> vid 4 at 2744.377973486428
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 35_5 -> vid 0 at 2858.237547186006
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 39_5 -> vid 0 at 2970.4624317721446
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 38_1 -> vid 0 at 3021.3531393251887
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 44_5 -> vid 4 at 3163.09018014134
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 34_4 -> vid 0 at 3188.8873184452636
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 43_1 -> vid 3 at 3233.8324308535666
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 32_7 -> vid 4 at 3347.1253817142883
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 31_7 -> vid 3 at 3522.5707954285726
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 41_4 -> vid 3 at 3522.5707954285726
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 47_1 -> vid 1 at 3554.675017022242
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 35_7 -> vid 2 at 3808.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 39_7 -> vid 2 at 3808.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 45_4 -> vid 4 at 3840.0
+19748-src.broker.PTBroker-INFO-AMoD offer is not available for sub_request 52_5
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 50_1 -> vid 0 at 3878.6905981164805
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 49_1 -> vid 3 at 3861.2642802038276
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 51_4 -> vid 1 at 4108.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 44_7 -> vid 3 at 4108.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 48_4 -> vid 3 at 4108.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 53_4 -> vid 0 at 4432.644701302407
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 57_5 -> vid 3 at 4469.860581918107
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 56_5 -> vid 3 at 4600.437711742278
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 61_5 -> vid 3 at 4630.437711742278
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 62_1 -> vid 4 at 4697.330721645488
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 59_4 -> vid 3 at 4763.15722857142
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 54_4 -> vid 4 at 4921.617805714282
+19748-src.broker.PTBroker-INFO-AMoD offer is not available for sub_request 67_1
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 64_5 -> vid 3 at 5020.695254040624
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 60_4 -> vid 0 at 5040.000000000003
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 66_1 -> vid 3 at 5088.120715170851
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 69_1 -> vid 2 at 5126.294029957855
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 70_5 -> vid 2 at 5215.960286452873
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 65_4 -> vid 1 at 5340.000000000002
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 68_4 -> vid 1 at 5340.000000000002
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 56_7 -> vid 2 at 5383.494465572944
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 57_7 -> vid 2 at 5383.494465572944
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 71_5 -> vid 0 at 5450.452383369856
+19748-src.broker.PTBroker-INFO-AMoD offer is not available for sub_request 75_5
+19748-src.broker.PTBroker-INFO-AMoD offer is not available for sub_request 76_5
+19748-src.broker.PTBroker-INFO-AMoD offer is not available for sub_request 77_1
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 61_7 -> vid 4 at 5640.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 78_5 -> vid 3 at 5790.934986002245
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 82_1 -> vid 3 at 5790.934986002245
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 86_5 -> vid 3 at 5875.036307212284
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 73_4 -> vid 0 at 5989.635822857152
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 87_5 -> vid 1 at 6067.855022040629
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 80_4 -> vid 3 at 6093.5473835881185
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 64_7 -> vid 2 at 6142.089626715804
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 84_4 -> vid 1 at 6237.999999999998
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 71_7 -> vid 4 at 6240.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 78_7 -> vid 0 at 6508.000000000001
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 70_7 -> vid 3 at 6508.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 88_4 -> vid 3 at 6508.0
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 90_1 -> vid 0 at 6739.363382818804
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 92_1 -> vid 4 at 6820.63877112411
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 86_7 -> vid 0 at 6927.50277142857
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 97_5 -> vid 1 at 6947.505301956449
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 93_5 -> vid 2 at 6946.299832528746
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 98_1 -> vid 1 at 7018.04621968905
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 96_1 -> vid 3 at 7103.863032090742
+19748-src.FleetSimulationBase-INFO-Saving final simulation state.
+19748-src.FleetSimulationBase-INFO-record_remaining_assignments()
+19748-src.FleetSimulationBase-INFO-	 time 7200, remaining tasks 22
+19748-src.FleetSimulationBase-INFO-	 time 7260, remaining tasks 22
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 95_4 -> vid 1 at 7266.756234324051
+19748-src.FleetSimulationBase-INFO-	 time 7320, remaining tasks 20
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 99_1 -> vid 0 at 7362.141833149819
+19748-src.FleetSimulationBase-INFO-	 time 7380, remaining tasks 17
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 87_7 -> vid 4 at 7419.378815287235
+19748-src.FleetSimulationBase-INFO-	 time 7440, remaining tasks 15
+19748-src.FleetSimulationBase-INFO-	 time 7500, remaining tasks 14
+19748-src.FleetSimulationBase-INFO-	 time 7560, remaining tasks 14
+19748-src.FleetSimulationBase-INFO-	 time 7620, remaining tasks 10
+19748-src.FleetSimulationBase-INFO-	 time 7680, remaining tasks 10
+19748-src.FleetSimulationBase-INFO-	 time 7740, remaining tasks 8
+19748-src.FleetSimulationBase-INFO-	 time 7800, remaining tasks 8
+19748-src.FleetSimulationBase-INFO-	 time 7860, remaining tasks 8
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 93_7 -> vid 0 at 7908.357962285712
+19748-src.FleetSimulationBase-INFO-	 time 7920, remaining tasks 7
+19748-src.FleetSimulationBase-INFO-	 time 7980, remaining tasks 6
+19748-src.demand.demand-WARNING-waiting rq boarding warning : rid 97_7 -> vid 2 at 8040.0
+19748-src.FleetSimulationBase-INFO-	 time 8040, remaining tasks 5
+19748-src.FleetSimulationBase-INFO-	 time 8100, remaining tasks 4
+19748-src.FleetSimulationBase-INFO-	 time 8160, remaining tasks 4
+19748-src.FleetSimulationBase-INFO-	 time 8220, remaining tasks 1
+19748-src.FleetSimulationBase-INFO-	 time 8280, remaining tasks 0
+19748-src.FleetSimulationBase-INFO-Scenario example_ptbroker finished:
+      initialization : 0:00:00 h
+          simulation : 0:00:04 h
+          evaluation : 0:00:00 h
+
