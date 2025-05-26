@@ -10,4 +10,4 @@ wheels/
 .venv
 
 # Data
-data/*
+data/sum-wp2_2-deliverable/simulation-results/

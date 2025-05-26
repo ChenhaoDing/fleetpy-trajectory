@@ -23,7 +23,7 @@ class VehTrajBuilder:
         _, _, travel_time = self.network_router.get_shortest_path_details(start_node_id, end_node_id, 'travel_time')
         return travel_time
 
-    def build_vehicle_timeline(self, veh_stats: pd.DataFrame, )-> dict:
+    def build_vehicle_timeline(self, veh_stats: pd.DataFrame, veh_id: int)-> dict:
         timeline: dict = {}  # Initialize an empty dictionary to store the timeline: {time: [node_id, occupancy]}
         record_count: int = 0
 
@@ -101,7 +101,7 @@ class VehTrajBuilder:
                 
                 timeline[end_time] = (route[-1], 0)
 
-            self.logger.info(f"The Vehicle Trajectory has been built.")
+            self.logger.info(f"The Vehicle Trajectory for vehicle {veh_id} has been built.")
             return timeline
 
         except Exception as e:
@@ -120,7 +120,7 @@ class VehTrajBuilder:
         time_steps: np.ndarray = np.arange(start_time, end_time+1, time_step)
 
         for veh_id, veh_stats in fleet_stats.items():
-            veh_timeline = self.build_vehicle_timeline(veh_stats)
+            veh_timeline = self.build_vehicle_timeline(veh_stats, veh_id)
             if veh_timeline is None:
                 continue
             veh_trajectory: dict = {}  # Initialize an empty dictionary to store the vehicle trajectory: {time: [node_id, occupancy]}
