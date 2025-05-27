@@ -27,6 +27,7 @@ class NetworkRouter:
         else: 
             self.logger = logger
 
+        self.nodes_df: pd.DataFrame = None
         self.network: nx.Graph = self.build_network_from_csvs(network_path, node_id_col, origin_col, destination_col, distance_col, time_col)
 
     def build_network_from_csvs(
@@ -57,8 +58,8 @@ class NetworkRouter:
             edges_filepath = os.path.join(network_path, 'edges.csv')
 
             self.logger.info(f"Reading node file: {nodes_filepath}")
-            nodes_df = pd.read_csv(nodes_filepath)
-            self.logger.info(f"Read {len(nodes_df)} nodes.")
+            self.nodes_df = pd.read_csv(nodes_filepath)
+            self.logger.info(f"Read {len(self.nodes_df)} nodes.")
 
             self.logger.info(f"Reading edge file: {edges_filepath}")
             edges_df = pd.read_csv(edges_filepath)
@@ -68,8 +69,8 @@ class NetworkRouter:
 
             required_edge_cols = [origin_col, destination_col, distance_col, time_col]
 
-            if not all(col in nodes_df.columns for col in required_node_cols):
-                missing_cols = [col for col in required_node_cols if col not in nodes_df.columns]
+            if not all(col in self.nodes_df.columns for col in required_node_cols):
+                missing_cols = [col for col in required_node_cols if col not in self.nodes_df.columns]
                 self.logger.error(f"Error: Node file is missing required columns: {missing_cols}")
                 return None
 
@@ -85,7 +86,7 @@ class NetworkRouter:
             self.logger.info("Building network...")
 
             # add nodes (including all attributes)
-            for _, row in nodes_df.iterrows():
+            for _, row in self.nodes_df.iterrows():
                 node_data = row.to_dict() # get all node information
                 node_id = node_data[node_id_col]
                 G.add_node(node_id, **node_data)
@@ -201,3 +202,6 @@ class NetworkRouter:
             self.logger.error(f"Error calculating shortest path: {e}")
             # may be due to invalid weight values (e.g., NaN or negative, though we try to filter these)
             return None, None, None
+        
+    def get_nodes_df(self) -> pd.DataFrame:
+        return self.nodes_df

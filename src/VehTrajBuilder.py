@@ -7,7 +7,7 @@ from src.NetworkRouter import NetworkRouter
 
 
 class VehTrajBuilder:
-    def __init__(self, network_router: NetworkRouter, logger: logging.Logger = None):
+    def __init__(self, network_router: NetworkRouter, logger: logging.Logger = None, nodes_df: pd.DataFrame = None):
         if logger is None:
             self.logger = logging.getLogger(__name__)
             self.logger.setLevel(logging.INFO)
@@ -18,6 +18,7 @@ class VehTrajBuilder:
             self.logger = logger
 
         self.network_router: NetworkRouter = network_router
+        self.nodes_df: pd.DataFrame = nodes_df
 
     def _query_travel_time_1to1(self, start_node_id: int, end_node_id: int) -> float:
         _, _, travel_time = self.network_router.get_shortest_path_details(start_node_id, end_node_id, 'travel_time')
@@ -101,8 +102,17 @@ class VehTrajBuilder:
                 
                 timeline[end_time] = (route[-1], 0)
 
+            # use coordinates from nodes_df
+            new_timeline = {}
+            if self.nodes_df is not None:
+                for time, (node_id, occupancy) in timeline.items():
+                    if node_id in self.nodes_df.index:
+                        new_timeline[int(time)] = ((float(self.nodes_df.loc[node_id, 'pos_x']), float(self.nodes_df.loc[node_id, 'pos_y'])), occupancy)
+                    else:
+                        self.logger.warning(f"Warning: Node ID '{node_id}' for vehicle '{veh_id}' at time {time} not found in nodes data. Skipping vehicle for this frame.")
+
             self.logger.info(f"The Vehicle Trajectory for vehicle {veh_id} has been built.")
-            return timeline
+            return new_timeline
 
         except Exception as e:
             self.logger.error(f"Unexpected error building vehicle trajectory: {e}")

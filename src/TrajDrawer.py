@@ -1,35 +1,38 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import matplotlib.colors as mcolors
+import matplotlib.gridspec as gridspec
 import numpy as np
-import pandas as pd
 import os
 import logging
 from typing import Any, Dict, Tuple, List
+import rasterio
+from rasterio.plot import show as rio_show
 
 
 class TrajDrawer:
     def __init__(
             self, 
-            nodes_filepath: str,
             background_image_path: str,
             bounding_box: tuple,  # Should be (x_min, y_min, x_max, y_max)
             logger: logging.Logger = None,
-            node_id_col: str = 'node_index', 
-            node_x_col: str = 'pos_x',
-            node_y_col: str = 'pos_y'
+            pt_color: str = 'blue',         
+            pt_reversed_color: str = 'green',
+            point_size: int = 30,
+            occupancy_to_color_map: Dict[Any, Dict[str, Any]] = None,
+            default_vehicle_color: str = 'grey',
             ):
         """
         Initializes the TrajDrawer.
 
         Args:
-            nodes_filepath: Path to the CSV file containing node coordinates.
             background_image_path: Path to the TIF background image.
             bounding_box: Tuple defining the image extent (x_min, y_min, x_max, y_max).
             logger: Optional logger instance. If None, a default logger is created.
-            node_id_col: Name of the column containing node IDs in the nodes CSV.
-            node_x_col: Name of the column containing x-coordinates in the nodes CSV.
-            node_y_col: Name of the column containing y-coordinates in the nodes CSV.
+            pt_color: Color for PT trajectories.
+            pt_reversed_color: Color for reversed PT trajectories.
+            point_size: Size of the points in the scatter plot.
+            occupancy_to_color_map: Dictionary mapping occupancy values to colors and labels.
+            default_vehicle_color: Color to use if occupancy value is not found in the map.
         """
         if logger is None:
             self.logger = logging.getLogger(__name__)
@@ -40,42 +43,32 @@ class TrajDrawer:
         else: 
             self.logger = logger
 
-        self.node_id_col = node_id_col
-        self.node_x_col = node_x_col
-        self.node_y_col = node_y_col
-
-        self.nodes_dict: Dict[Any, Tuple[float, float]] = self._load_nodes(nodes_filepath)
-        self.background_image: np.ndarray = self._load_background_image(background_image_path)
+        self.background_image_path: str = background_image_path
         self.bounding_box: tuple = self._set_bounding_box(bounding_box)
 
+        self.pt_color = pt_color
+        self.pt_reversed_color = pt_reversed_color
+        self.point_size = point_size
+
         self.fig = None
-        self.ax = None
-        self.scatter = None
+        self.ax_map = None
+        self.ax_info = None
+        self.sc_vehicle = None # Scatter for vehicles
+        self.sc_pt = None      # Scatter for pt
+        self.sc_pt_reversed = None # Scatter for pt_reversed
         self.time_text = None
 
-    def _load_nodes(self, nodes_filepath: str) -> Dict[Any, Tuple[float, float]]:
-        """Loads node coordinates from CSV into a dictionary for fast lookup."""
-        try:
-            nodes_df = pd.read_csv(nodes_filepath)
-            # Validate required columns
-            if not {self.node_id_col, self.node_x_col, self.node_y_col}.issubset(nodes_df.columns):
-                 raise ValueError(f"Nodes CSV must contain columns: '{self.node_id_col}', '{self.node_x_col}', '{self.node_y_col}'")
-
-            nodes_dict = nodes_df.set_index(self.node_id_col)[[self.node_x_col, self.node_y_col]].apply(tuple, axis=1).to_dict()
-            self.logger.info(f"Read {len(nodes_dict)} nodes from {nodes_filepath}.")
-            return nodes_dict
-        except Exception as e:
-            self.logger.error(f"An unexpected error occurred while loading nodes: {e}")
-            raise
-    
-    def _load_background_image(self, background_image_path: str) -> np.ndarray:
-        try:
-            background_image: np.ndarray = plt.imread(background_image_path)
-            self.logger.info(f"Loaded background image from {background_image_path}")
-            return background_image
-        except Exception as e:
-            self.logger.error(f"Error loading background image {background_image_path}: {e}")
-            raise
+        if occupancy_to_color_map is None:
+            self.occupancy_to_color_map = {
+                0: {'color': 'blue', 'label': 'Vehicle (Occ: 0)'},
+                1: {'color': 'yellow', 'label': 'Vehicle (Occ: 1)'},
+                2: {'color': 'orange', 'label': 'Vehicle (Occ: 2)'},
+                3: {'color': 'indigo', 'label': 'Vehicle (Occ: 3)'},
+                4: {'color': 'black', 'label': 'Vehicle (Occ: 4)'},
+            }
+        else:
+            self.occupancy_to_color_map = occupancy_to_color_map
+        self.default_vehicle_color = default_vehicle_color
         
     def _set_bounding_box(self, bounding_box: tuple) -> tuple:
         """Validates and sets the bounding box."""
@@ -85,173 +78,250 @@ class TrajDrawer:
         else:
             raise ValueError("Bounding box should be a tuple of four numbers: (x_min, y_min, x_max, y_max).")
         
+    def _prepare_data_for_animation(self, trajectories_data: Dict[Any, Dict[str, List]]):
+        """
+        Prepares data by extracting all timestamps and determining occupancy range.
+        """
+        if not trajectories_data:
+            self.logger.warning("Trajectories data is empty.")
+            return []
+        # We still need sorted timestamps
+        return sorted(trajectories_data.keys())
+        
     def _setup_plot(
-            self, 
-            title: str = "Fleet Trajectory",
-            figsize: tuple = (10, 10),
-            scatter_size: int = 50,
-            edgecolors: str = 'k', linewidths: float = 0.5,
-            text_position: tuple = (0.02, 0.95), text_ha: str = 'left', text_va: str = 'top', 
-            text_fontsize: int = 10, text_color: str = 'black', text_backgroundcolor: str = 'white', text_zorder: int = 10,
-            ):
+        self,
+        title: str = "Trajectory Animation",
+        figsize: tuple = (6.9, 9), # Increased size for legend and colorbar
+        text_position: tuple = (0.02, 0.95), text_ha: str = 'left', text_va: str = 'top',
+        text_fontsize: int = 13, text_color: str = 'black', background_color: str = 'white', text_zorder: int = 10,
+    ):
         """Sets up the Matplotlib figure and axes."""
-        self.fig, self.ax = plt.subplots(figsize=figsize)
-        if self.background_image is not None:
-                # aspect='auto' allows the image to stretch to the bounding box
-                # extent defines the coordinate system for the image corners
-            self.ax.imshow(self.background_image, extent=self.bounding_box, aspect='auto', origin='upper')
+        self.fig, self.ax_map = plt.subplots(figsize=figsize)
+
+        self.ax_map.axis('off')
+
+        if self.background_image_path is not None:
+            with rasterio.open(self.background_image_path) as src:
+                rio_show(src, ax=self.ax_map, transform=src.transform) 
+                self.logger.info(f"Background image plotted using rasterio.plot.show. CRS: {src.crs}")
+                self.logger.info(f"Rasterio set ax limits to: X={self.ax_map.get_xlim()}, Y={self.ax_map.get_ylim()}")
+                self.ax_map.set_aspect('equal')
         else:
-            self.logger.warning("No background image loaded. Plotting on empty axes.")
+            self.logger.warning("No background image. Plotting on empty axes with bounding_box limits.")
+            self.ax_map.set_xlim(self.bounding_box[0], self.bounding_box[2])
+            self.ax_map.set_ylim(self.bounding_box[1], self.bounding_box[3])
+            self.ax_map.set_aspect('auto')
 
-        self.ax.set_xlim(694970, 697782)
-        self.ax.set_ylim(5328907, 5331570)
-        self.ax.set_title(title)
-        # Optional: Hide axis ticks/labels if the background provides context
-        self.ax.set_xticks([])
-        self.ax.set_yticks([])
+            self.ax_map.set_title(title)
 
-        # Initialize placeholder scatter plot for vehicles
-        self.scatter = self.ax.scatter([], [], s=scatter_size, facecolors=[], edgecolors='none')
+        # Initialize scatter plots for each type of point
+        self.sc_vehicle = self.ax_map.scatter([], [], s=self.point_size, label='_nolegend_',
+                                          alpha=0.8, linewidths=0.5, zorder=10)
+        self.sc_pt = self.ax_map.scatter([], [], s=self.point_size+2, color=self.pt_color, marker='s', label='PT', alpha=0.8, zorder=9)
+        self.sc_pt_reversed = self.ax_map.scatter([], [], s=self.point_size+2, color=self.pt_reversed_color, marker='s', label='PT Reversed', alpha=0.8, zorder=9)
 
-        # Initialize text for timestamp display
-        self.time_text = self.ax.text(
-            text_position[0], text_position[1], '', transform=self.ax.transAxes, ha=text_ha, va=text_va,
-            fontsize=text_fontsize, color=text_color, backgroundcolor=text_backgroundcolor, zorder=text_zorder
+        self.time_text = self.ax_map.text(
+            text_position[0], text_position[1], '', transform=self.ax_map.transAxes, ha=text_ha, va=text_va,
+            fontsize=text_fontsize, color=text_color, backgroundcolor=background_color, zorder=text_zorder
+        )
+
+        # Create legend for vehicle occupancies
+        legend_handles = []
+        legend_labels = []
+
+        sorted_occupancy_keys = sorted(self.occupancy_to_color_map.keys())
+
+        for occ_key in sorted_occupancy_keys:
+            info = self.occupancy_to_color_map[occ_key]
+            color_str = info.get('color', self.default_vehicle_color)
+            label_str = info.get('label', f'Vehicle (Occ: {occ_key})')
+
+            vehicle_proxy = plt.Line2D(
+                [0], [0],
+                linestyle='None',
+                marker='o',
+                markersize=8,
+                markerfacecolor=color_str,
+                markeredgewidth=0,
             )
+            legend_handles.append(vehicle_proxy)
+            legend_labels.append(label_str)
 
-        plt.tight_layout() # Adjust layout to prevent labels overlapping
+        if self.sc_pt and self.sc_pt.get_label() and not self.sc_pt.get_label().startswith('_'):
+            pt_proxy = plt.Line2D(
+                [0], [0],
+                linestyle='None',
+                marker='s',
+                markersize=8,
+                markerfacecolor=self.pt_color,
+                markeredgewidth=0,
+            )
+            legend_handles.append(pt_proxy)
+            legend_labels.append(self.sc_pt.get_label())
+
+        if self.sc_pt_reversed and self.sc_pt_reversed.get_label() and not self.sc_pt_reversed.get_label().startswith('_'):
+            pt_reversed_proxy = plt.Line2D(
+                [0], [0],
+                linestyle='None',
+                marker='s',
+                markersize=8,
+                markerfacecolor=self.pt_reversed_color,
+                markeredgewidth=0,
+            )
+            legend_handles.append(pt_reversed_proxy)
+            legend_labels.append(self.sc_pt_reversed.get_label())
+
+        if legend_handles:
+            self.ax_map.legend(legend_handles, legend_labels, loc='lower left', 
+                                fontsize='small', frameon=True, facecolor=background_color)
+        else:
+            self.logger.warning("No items to show in custom legend.")
+
+        # plt.tight_layout()
+        self.fig.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
 
     def _update_frame(
-        self, 
-        frame_idx: int,
-        fleet_trajectory: Dict[str, Dict[Any, Tuple[Any, float]]],
-        timestamps: List[Any],
-        speed: int,
-        occupancy_color_map: Dict[int, str]
-        ):
+        self,
+        frame_idx: int, # This is the direct index for timestamps_for_animation
+        trajectories_data: Dict[Any, Dict[str, List]],
+        timestamps_for_animation: List[Any]
+    ):
         """
-        Updates the plot for a single animation frame.
-
-        Args:
-            timestamp: The current timestamp.
-            fleet_trajectory: The main trajectory data structure.
-
-        Returns:
-            A tuple of mutable plot elements (scatter plot, time text).
+        Updates the plot for a single animation frame using the new data structure.
         """
-        time_step_index = frame_idx * speed
-        timestamp = timestamps[time_step_index]
+        current_time = timestamps_for_animation[frame_idx]
+        data_at_time = trajectories_data.get(current_time, {})
 
-        if time_step_index >= len(timestamps):
-            self.logger.warning(f"Timestamp index {time_step_index} is out of range for timestamps.")
-            return self.scatter, self.time_text
+        if not data_at_time:
+            print(f"No data for time {current_time}. Skipping frame.")
 
-        x_coords, y_coords, colors = [], [], []
-
-        for vehicle_id, trajectory in fleet_trajectory.items():
-            if timestamp in trajectory:
-                node_id, occupancy = trajectory[timestamp]
-                if node_id in self.nodes_dict:
-                    x, y = self.nodes_dict[node_id]
-                    x_coords.append(x)
-                    y_coords.append(y)
-                    color = occupancy_color_map[int(occupancy)]
-                    colors.append(color)
+        # Update Vehicle points
+        vehicle_points = data_at_time.get('vehicle', [])
+        if vehicle_points:
+            coords, occupancies = zip(*vehicle_points)
+            x_veh, y_veh = zip(*coords) if coords else ([], [])
+            self.sc_vehicle.set_offsets(np.c_[x_veh, y_veh])
+            
+            vehicle_colors = []
+            for occ_val in occupancies:
+                key_to_check = int(occ_val)
+                info_entry = self.occupancy_to_color_map.get(key_to_check)
+                if info_entry:
+                    color = info_entry.get('color', self.default_vehicle_color)
                 else:
-                    self.logger.warning(f"Node ID '{node_id}' for vehicle '{vehicle_id}' at time {timestamp} not found in nodes data. Skipping vehicle for this frame.")
+                    color = self.default_vehicle_color
+                    self.logger.warning(
+                        f"Time {current_time}: Occupancy value '{key_to_check}' "
+                        f"not found in vehicle_occupancy_legend_info. Using default color '{self.default_vehicle_color}'."
+                    )
+                vehicle_colors.append(color)
+            
+            if vehicle_colors: # Should always be true if vehicle_points is true
+                 self.sc_vehicle.set_facecolors(vehicle_colors)
+            else: # Fallback if somehow vehicle_colors list ended up empty
+                 self.sc_vehicle.set_facecolors([])
+            self.sc_vehicle.set_alpha(0.8)
+        else:
+            self.sc_vehicle.set_offsets(np.empty((0, 2)))
+            self.sc_vehicle.set_alpha(0.0) # Hide if no data
 
-        # Efficiently update scatter plot data
-        if x_coords: # Check if there are any vehicles to plot in this frame
-            self.scatter.set_offsets(np.c_[x_coords, y_coords])
+        # Update PT points
+        pt_points = data_at_time.get('pt', [])
+        if pt_points:
+            x_pt, y_pt = zip(*pt_points) if pt_points else ([], [])
+            self.sc_pt.set_offsets(np.c_[x_pt, y_pt])
+            self.sc_pt.set_alpha(0.8)
+        else:
+            self.sc_pt.set_offsets(np.empty((0, 2)))
+            self.sc_pt.set_alpha(0.0)
 
-            self.scatter.set_facecolors(colors)
-        else: # Clear scatter if no vehicles are present
-            self.scatter.set_offsets(np.empty((0, 2)))
-            self.scatter.set_facecolors(np.empty((0, 4)))
+        # Update PT_reversed points
+        pt_reversed_points = data_at_time.get('pt_reverse', [])
+        if pt_reversed_points:
+            x_ptr, y_ptr = zip(*pt_reversed_points) if pt_reversed_points else ([], [])
+            self.sc_pt_reversed.set_offsets(np.c_[x_ptr, y_ptr])
+            self.sc_pt_reversed.set_alpha(0.8)
+        else:
+            self.sc_pt_reversed.set_offsets(np.empty((0, 2)))
+            self.sc_pt_reversed.set_alpha(0.0)
 
-        # Update the time display
-        self.time_text.set_text(f'Time: {timestamp}')
+        self.time_text.set_text(f'Time: {current_time}')
 
-        # Return the updated plot elements (important for blit=True, harmless for blit=False)
-        return self.scatter, self.time_text
-    
+        return self.sc_vehicle, self.sc_pt, self.sc_pt_reversed, self.time_text
+
     def draw_trajectory_animation(
         self,
-        fleet_trajectory: Dict[str, Dict[Any, Tuple[Any, float]]],
-        occupancy_color_map: Dict[int, str] = None,
-        speed: int = 1,
-        start_time: int = 0,
-        end_time: int = None,
-        time_step: int = 1,
-        output_filepath: str = "./fleet_animation.gif",
+        trajectories_data: Dict[Any, Dict[str, List]], # New data structure
+        # Removed: occupancy_color_map, start_time, end_time, time_step
+        # speed parameter is now implicitly 1 frame per timestamp in trajectories_data
+        output_filepath: str = "./trajectory_animation.gif",
         interval_ms: int = 100,
-        ):
-        if not fleet_trajectory:
-            self.logger.error("Fleet trajectory data is empty. Cannot create animation.")
+        repeat_animation: bool = False # Renamed from 'repeat' for clarity
+    ):
+        """
+        Generates and saves the trajectory animation using the new data structure.
+        """
+        if not trajectories_data:
+            self.logger.error("Trajectories data is empty. Cannot create animation.")
             return
-        if not isinstance(speed, int) or speed <= 0:
-             self.logger.error(f"Speed must be a positive integer, got {speed}.")
-             raise ValueError("Speed must be a positive integer.")
 
-        # Add a color bar for occupancy
-        if occupancy_color_map is None:
-            occupancy_color_map = {
-                0: 'black',    # Example color for occupancy 0
-                1: 'blue',    # Example color for occupancy 1
-                2: 'lime',    # Example color for occupancy 2
-                3: 'orange',  # Example color for occupancy 3
-                4: 'red'      # Example color for occupancy 4
-            }
-            self.logger.info(f"Using default occupancy color map: {occupancy_color_map}")
-        else:
-            self.logger.info(f"Using provided occupancy color map: {occupancy_color_map}")
+        self.logger.info(f"Preparing animation with interval={interval_ms}ms...")
 
-        self.logger.info(f"Preparing animation with speed={speed}, interval={interval_ms}ms...")
+        # --- 1. Data Preparation & Normalization ---
+        timestamps_for_animation = self._prepare_data_for_animation(trajectories_data)
+        if not timestamps_for_animation:
+            self.logger.error("No timestamps found in trajectories data. Cannot create animation.")
+            return
 
-        # --- 1. Data Preparation ---
-        # Get timestamps and sort them
-        timestamps: np.ndarray = np.arange(start_time, end_time+1, time_step)
-        
-        num_time_steps = len(timestamps)
-        num_frames = (num_time_steps + speed - 1) // speed # Ceiling division
+        num_frames = len(timestamps_for_animation)
 
         # --- 2. Setup Plot ---
         self._setup_plot()
 
         # --- 3. Create Animation ---
         self.logger.info(f"Creating animation with {num_frames} frames...")
-        # Use functools.partial if needed to pass extra static args to _update_frame,
-        # but fargs is standard for FuncAnimation.
         ani = animation.FuncAnimation(
             fig=self.fig,
             func=self._update_frame,
             frames=num_frames,
-            fargs=(fleet_trajectory, timestamps, speed, occupancy_color_map), # Pass additional arguments
-            interval=interval_ms,  # Delay between frames in milliseconds
-            blit=False,           # blit=False is often more robust, especially with text/color changes
-            repeat=False          # Do not repeat the animation
+            fargs=(trajectories_data, timestamps_for_animation),
+            interval=interval_ms,
+            blit=True,
+            repeat=repeat_animation
         )
 
         # --- 4. Save Animation ---
         try:
             self.logger.info(f"Saving animation to {output_filepath}...")
-            # Determine writer based on extension (basic implementation)
             writer = None
             if output_filepath.lower().endswith('.gif'):
-                writer = animation.PillowWriter(fps=1000 / interval_ms) # Pillow is common for GIFs
+                # PillowWriter is generally good for GIFs. 'imagemagick' can also be used if installed.
+                writer = animation.PillowWriter(fps=1000 / interval_ms)
+            elif output_filepath.lower().endswith('.mp4'):
+                # FFMpegWriter for MP4. Requires ffmpeg to be installed and on PATH.
+                writer = animation.FFMpegWriter(fps=1000 / interval_ms)
             else:
-                raise NotImplementedError("Unsupported file format for animation.")
+                self.logger.error(f"Unsupported file format for animation: {output_filepath}. Please use .gif or .mp4.")
+                # Fallback or raise error
+                plt.close(self.fig) # Close the figure if not saving
+                return
 
             ani.save(output_filepath, writer=writer)
-
             self.logger.info(f"Animation saved successfully to {output_filepath}")
 
         except Exception as e:
             self.logger.error(f"Error saving animation to {output_filepath}: {e}")
-
-        # --- 6. Cleanup ---
-        plt.close(self.fig)
-        self.fig = None
-        self.ax = None
-        self.scatter = None
-        self.time_text = None
+            self.logger.error("Ensure that the required writer (Pillow for GIF, FFMpeg for MP4) is installed.")
+        finally:
+            # --- 5. Cleanup ---
+            # It's good practice to close the figure after saving the animation,
+            # especially if generating many animations in a loop.
+            if self.fig:
+                plt.close(self.fig)
+            self.fig = None
+            self.ax_map = None
+            self.ax_info = None
+            self.sc_vehicle = None
+            self.sc_pt = None
+            self.sc_pt_reversed = None
+            self.time_text = None
