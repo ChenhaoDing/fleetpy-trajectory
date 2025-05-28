@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import matplotlib.gridspec as gridspec
+from matplotlib.legend_handler import HandlerBase
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import numpy as np
-import os
 import logging
 from typing import Any, Dict, Tuple, List
 import rasterio
@@ -15,8 +16,8 @@ class TrajDrawer:
             background_image_path: str,
             bounding_box: tuple,  # Should be (x_min, y_min, x_max, y_max)
             logger: logging.Logger = None,
-            pt_color: str = 'blue',         
-            pt_reversed_color: str = 'green',
+            pt_color: str = '#00796b',         
+            pt_reversed_color: str = '#00796b',
             point_size: int = 30,
             occupancy_to_color_map: Dict[Any, Dict[str, Any]] = None,
             default_vehicle_color: str = 'grey',
@@ -60,11 +61,11 @@ class TrajDrawer:
 
         if occupancy_to_color_map is None:
             self.occupancy_to_color_map = {
-                0: {'color': 'blue', 'label': 'Vehicle (Occ: 0)'},
-                1: {'color': 'yellow', 'label': 'Vehicle (Occ: 1)'},
-                2: {'color': 'orange', 'label': 'Vehicle (Occ: 2)'},
-                3: {'color': 'indigo', 'label': 'Vehicle (Occ: 3)'},
-                4: {'color': 'black', 'label': 'Vehicle (Occ: 4)'},
+                0: {'color': '#BDBDBD', 'label': 'Vehicle (Idle)'},
+                1: {'color': "#3FC94D", 'label': 'Vehicle (Occ: 1)'},
+                2: {'color': "#F7FF5FF2", 'label': 'Vehicle (Occ: 2)'},
+                3: {'color': "#F09B1A", 'label': 'Vehicle (Occ: 3)'},
+                4: {'color': "#F45525", 'label': 'Vehicle (Occ: 4)'},
             }
         else:
             self.occupancy_to_color_map = occupancy_to_color_map
@@ -91,9 +92,9 @@ class TrajDrawer:
     def _setup_plot(
         self,
         title: str = "Trajectory Animation",
-        figsize: tuple = (6.9, 9), # Increased size for legend and colorbar
+        figsize: tuple = (7, 9), # Increased size for legend and colorbar
         text_position: tuple = (0.02, 0.95), text_ha: str = 'left', text_va: str = 'top',
-        text_fontsize: int = 13, text_color: str = 'black', background_color: str = 'white', text_zorder: int = 10,
+        text_fontsize: int = 11, text_color: str = 'black', background_color: str = 'white', text_zorder: int = 10,
     ):
         """Sets up the Matplotlib figure and axes."""
         self.fig, self.ax_map = plt.subplots(figsize=figsize)
@@ -116,9 +117,10 @@ class TrajDrawer:
 
         # Initialize scatter plots for each type of point
         self.sc_vehicle = self.ax_map.scatter([], [], s=self.point_size, label='_nolegend_',
-                                          alpha=0.8, linewidths=0.5, zorder=10)
-        self.sc_pt = self.ax_map.scatter([], [], s=self.point_size+2, color=self.pt_color, marker='s', label='PT', alpha=0.8, zorder=9)
-        self.sc_pt_reversed = self.ax_map.scatter([], [], s=self.point_size+2, color=self.pt_reversed_color, marker='s', label='PT Reversed', alpha=0.8, zorder=9)
+                                          alpha=0.8, linewidths=0.5, zorder=10,
+                                          edgecolors='k')
+        self.sc_pt = self.ax_map.scatter([], [], s=self.point_size-15, color=self.pt_color, marker='s', label='Subway Vehicle', alpha=0.8, zorder=9)
+        self.sc_pt_reversed = self.ax_map.scatter([], [], s=self.point_size-15, color=self.pt_reversed_color, marker='s', label='Subway Vehicle (reversed)', alpha=0.8, zorder=9)
 
         self.time_text = self.ax_map.text(
             text_position[0], text_position[1], '', transform=self.ax_map.transAxes, ha=text_ha, va=text_va,
@@ -142,7 +144,8 @@ class TrajDrawer:
                 marker='o',
                 markersize=8,
                 markerfacecolor=color_str,
-                markeredgewidth=0,
+                markeredgecolor='k',
+                markeredgewidth=0.3,
             )
             legend_handles.append(vehicle_proxy)
             legend_labels.append(label_str)
@@ -154,26 +157,49 @@ class TrajDrawer:
                 marker='s',
                 markersize=8,
                 markerfacecolor=self.pt_color,
-                markeredgewidth=0,
+                markeredgecolor='k',
+                markeredgewidth=0.3,
             )
             legend_handles.append(pt_proxy)
             legend_labels.append(self.sc_pt.get_label())
 
-        if self.sc_pt_reversed and self.sc_pt_reversed.get_label() and not self.sc_pt_reversed.get_label().startswith('_'):
-            pt_reversed_proxy = plt.Line2D(
-                [0], [0],
-                linestyle='None',
-                marker='s',
-                markersize=8,
-                markerfacecolor=self.pt_reversed_color,
-                markeredgewidth=0,
-            )
-            legend_handles.append(pt_reversed_proxy)
-            legend_labels.append(self.sc_pt_reversed.get_label())
+        # if self.sc_pt_reversed and self.sc_pt_reversed.get_label() and not self.sc_pt_reversed.get_label().startswith('_'):
+        #     pt_reversed_proxy = plt.Line2D(
+        #         [0], [0],
+        #         linestyle='None',
+        #         marker='s',
+        #         markersize=8,
+        #         markerfacecolor=self.pt_reversed_color,
+        #         markeredgewidth=0,
+        #     )
+        #     legend_handles.append(pt_reversed_proxy)
+        #     legend_labels.append(self.sc_pt_reversed.get_label())
+
+        pt_line_proxy = plt.Line2D(
+            [0], [0],
+            linestyle='-', 
+            linewidth=2,
+            color=self.pt_color,  
+        )
+        legend_handles.append(pt_line_proxy)
+        legend_labels.append('Subway Line')
+
+        pt_station_proxy = plt.Line2D(
+            [0], [0],
+            linestyle='None',
+            marker='^',
+            markersize=8,
+            markerfacecolor=self.pt_color,
+            markeredgecolor='k',
+            markeredgewidth=0.3, 
+        )
+        legend_handles.append(pt_station_proxy)
+        legend_labels.append('Mobility Hub')
 
         if legend_handles:
-            self.ax_map.legend(legend_handles, legend_labels, loc='lower left', 
-                                fontsize='small', frameon=True, facecolor=background_color)
+            legend_object = self.ax_map.legend(legend_handles, legend_labels, loc='lower left', 
+                                fontsize=11, frameon=True, facecolor=background_color)
+            legend_object.set_zorder(100)
         else:
             self.logger.warning("No items to show in custom legend.")
 
@@ -245,7 +271,7 @@ class TrajDrawer:
             self.sc_pt_reversed.set_offsets(np.empty((0, 2)))
             self.sc_pt_reversed.set_alpha(0.0)
 
-        self.time_text.set_text(f'Time: {current_time}')
+        self.time_text.set_text(f'Simulation Time: {current_time} s')
 
         return self.sc_vehicle, self.sc_pt, self.sc_pt_reversed, self.time_text
 
